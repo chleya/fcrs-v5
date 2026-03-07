@@ -1,0 +1,12 @@
+{
+  "experiment": "phenomenon_2",
+  "phase1": {
+    "common": 1,
+    "rare": 0
+  },
+  "phase2": {
+    "common": 1,
+    "rare": 0
+  },
+  "success": true
+}
