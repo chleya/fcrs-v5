@@ -163,14 +163,17 @@ class RepresentationPool:
         if active is None:
             return 0.0, None
         
-        # 计算激活值
-        min_len = min(len(active.vector), len(x))
+        # 计算激活值 - 处理不同长度
+        x_len = len(x)
+        v_len = len(active.vector)
+        min_len = min(x_len, v_len)
+        
         act = np.dot(active.vector[:min_len], x[:min_len])
         
-        # v5.1: 更新维度统计
-        if min_len > 0:
-            active.dim_contrib += np.abs(active.vector[:min_len] * x[:min_len]) * act
-            active.dim_reuse += (np.abs(active.vector[:min_len]) > 0.01).astype(float) * act
+        # 更新维度统计 - 确保大小一致
+        if min_len > 0 and len(active.dim_contrib) == v_len:
+            active.dim_contrib[:min_len] += np.abs(active.vector[:min_len] * x[:min_len]) * act
+            active.dim_reuse[:min_len] += (np.abs(active.vector[:min_len]) > 0.01).astype(float) * act
         
         return act, active
     
@@ -232,8 +235,8 @@ class EvolutionEngine:
         self.gamma = 0.2
         
         # v5.1: 新维度诞生参数
-        self.spawn_reuse_threshold = 5  # 进一步降低
-        self.min_compression_gain = 0.01  # 进一步降低
+        self.spawn_reuse_threshold = 30  # 进一步提高阈值
+        self.min_compression_gain = 0.2  # 提高阈值到20%
         self.dim_cost = 1.0  # 每加1维扣1单位预算
         
         # 统计
@@ -345,17 +348,22 @@ class EvolutionEngine:
         pruned_count = 0
         
         for r in self.pool.representations:
-            if len(r.vector) <= 1:
+            v_len = len(r.vector)
+            if v_len <= 1:
                 continue
             
-            # 找出贡献<5%的维度
-            max_contrib = np.max(r.dim_contrib) if np.max(r.dim_contrib) > 0 else 1.0
-            useless_mask = r.dim_contrib < (max_contrib * 0.05)
+            # 确保dim_contrib大小一致
+            if len(r.dim_contrib) != v_len:
+                r.dim_contrib = np.zeros(v_len)
             
-            if np.any(useless_mask):
-                # 置零（不删除，保留索引）
-                r.vector[useless_mask] = 0.0
-                pruned_count += 1
+            # 找出贡献<5%的维度
+            max_contrib = np.max(r.dim_contrib)
+            if max_contrib > 0:
+                useless_mask = r.dim_contrib < (max_contrib * 0.05)
+                if np.any(useless_mask):
+                    # 置零（不删除，保留索引）
+                    r.vector[useless_mask] = 0.0
+                    pruned_count += 1
         
         if pruned_count > 0:
             print(f"  维度清理: {pruned_count}个低贡献维度置零")
