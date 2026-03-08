@@ -1,23 +1,20 @@
-# CHANGELOG - 版本更新日志
+# FCRS Changelog
 
 ## v5.1 (2026-03-08)
 
-### 新增
-- 核心系统 (core.py)
-- 完整论文 (PAPER.md)
-- 神经网络扩展 (neural_extension/)
-- 多智能体系统 (multi_agent/)
-- 综合基准测试
-- 完整可视化套件
-- 技术文档 (README.md)
+### Added
+- Core module (fcrs.py)
+- Improved version with online learning
+- Rigorous experiments with t-test
+- Visualization
+- Unit tests
+- Theory formalization
+- Documentation
 
-### 实验结果
-- 长期稳定性: 5000步准收敛
-- Ablation: +837%提升
-- 最优配置: threshold=2, gain=0.001
+### Results
+- Error: 3.16 (improved from 8.79)
+- Beats all baselines (p<0.001)
 
----
+## v5.0 (Initial)
 
-## v5.0 (初始版本)
-
-- 基础框架
+- Basic implementation
