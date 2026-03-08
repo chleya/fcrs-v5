@@ -183,25 +183,38 @@ def run_rigorous_experiment(n_runs=10, steps=500):
     # 统计分析
     print('')
     print('='*60)
-    print('结果统计')
+    print('Statistical Results')
     print('='*60)
     
-    print('\n平均误差 (最后100步):')
+    print('\nAverage Error (last 100 steps):')
     for name, errors in results.items():
         mean = np.mean(errors)
         std = np.std(errors)
-        print(name + ': ' + str(round(mean, 4)) + ' ± ' + str(round(std, 4)))
+        print(f'{name}: {mean:.4f} +/- {std:.4f}')
     
-    # 简单对比
+    # 统计检验
     print('')
-    print('对比结论:')
-    fcrs_mean = np.mean(results['FCRS'])
-    online_mean = np.mean(results['Online'])
+    print('t-test (FCRS vs others):')
+    from scipy import stats
     
-    if fcrs_mean < online_mean:
-        print('FCRS < Online学习: 好')
-    else:
-        print('FCRS > Online学习: 需要改进')
+    fcrs_errors = np.array(results['FCRS'])
+    
+    for name in ['Random', 'Fixed', 'Online']:
+        other_errors = np.array(results[name])
+        t_stat, p_value = stats.ttest_ind(fcrs_errors, other_errors)
+        
+        if p_value < 0.001:
+            significance = '***'
+        elif p_value < 0.01:
+            significance = '**'
+        elif p_value < 0.05:
+            significance = '*'
+        else:
+            significance = 'ns'
+        
+        print(f'{name} vs FCRS: t={t_stat:.2f}, p={p_value:.4f} {significance}')
+    
+    return results
 
 
 if __name__ == "__main__":
