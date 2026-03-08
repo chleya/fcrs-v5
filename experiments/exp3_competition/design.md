@@ -1,50 +1,54 @@
-# Experiment 3: Competition Strength Test
+# Experiment 3: Competition × Capacity Cost
 
 **Date**: 2026-03-08  
-**Hypothesis**: H3 - 竞争机制太弱  
-**Design**: 淘汰率对表征稳定性的影响
+**Hypothesis**: H3 - 竞争机制与容量成本的交互  
+**Design**: 2D grid - λ × elimination_rate
 
 ---
 
-## 1. 唯一变量
+## 1. 实验矩阵
 
-| 变量 | 值 |
-|------|-----|
-| elimination_rate | {0.1, 0.3, 0.5, 0.9} |
-
----
-
-## 2. 固定参数
-
-| 参数 | 值 |
-|------|-----|
-| λ (capacity penalty) | 0.1 (使用Exp2b最佳) |
-| seeds | {0, 1, 2} |
-
----
-
-## 3. 规则
-
-```
-elimination_rate = e
-
-每步:
-- 计算所有表征适应度
-- 淘汰最低的 e% 表征
-- 补充新表征（如果池不满）
-```
+| λ | elimination_rate | dimension |
+|----|-----------------|-----------|
+| 0.01 | 0.1 | ? |
+| 0.01 | 0.3 | ? |
+| 0.01 | 0.5 | ? |
+| 0.01 | 0.9 | ? |
+| 0.1 | 0.1 | ? |
+| 0.1 | 0.3 | ? |
+| 0.1 | 0.5 | ? |
+| 0.1 | 0.9 | ? |
+| 1.0 | 0.1 | ? |
+| 1.0 | 0.3 | ? |
+| 1.0 | 0.5 | ? |
+| 1.0 | 0.9 | ? |
 
 ---
 
-## 4. 预期
+## 2. 理论预测
 
-| 淘汰率 | 预期行为 |
-|--------|---------|
-| 0.1 | 缓慢变化 |
-| 0.3 | 适中 |
-| 0.5 | 快速迭代 |
-| 0.9 | 极度不稳定 |
+| 区域 | 预期行为 |
+|------|---------|
+| λ小 + 竞争小 | dimension very large (runaway) |
+| λ小 + 竞争大 | dimension moderate |
+| λ大 | dimension small (cost主导) |
 
 ---
 
-*Design v1.0 - 2026-03-08*
+## 3. 预期结果
+
+可能出现 two-regime system：
+- cost-dominated: λ控制
+- competition-dominated: 修剪控制
+
+---
+
+## 4. 指标
+
+- final_dimension
+- expansion_rate (spawn/step)
+- pruning_rate (elim/step)
+
+---
+
+*Design v2.0 - 2026-03-08*
