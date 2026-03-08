@@ -1,0 +1,220 @@
+{
+  "results": [
+    {
+      "n_classes": 3,
+      "noise": 0.1,
+      "lambda": 0.001,
+      "seed": 0,
+      "avg_error": 0.3379437434380988,
+      "final_dimension": 506
+    },
+    {
+      "n_classes": 3,
+      "noise": 0.1,
+      "lambda": 0.001,
+      "seed": 1,
+      "avg_error": 1.493523067520214,
+      "final_dimension": 509
+    },
+    {
+      "n_classes": 3,
+      "noise": 0.1,
+      "lambda": 0.001,
+      "seed": 2,
+      "avg_error": 0.3207317825463622,
+      "final_dimension": 509
+    },
+    {
+      "n_classes": 3,
+      "noise": 0.1,
+      "lambda": 0.1,
+      "seed": 0,
+      "avg_error": 0.3379437434380988,
+      "final_dimension": 360
+    },
+    {
+      "n_classes": 3,
+      "noise": 0.1,
+      "lambda": 0.1,
+      "seed": 1,
+      "avg_error": 1.493523067520214,
+      "final_dimension": 334
+    },
+    {
+      "n_classes": 3,
+      "noise": 0.1,
+      "lambda": 0.1,
+      "seed": 2,
+      "avg_error": 0.3207317825463622,
+      "final_dimension": 352
+    },
+    {
+      "n_classes": 3,
+      "noise": 0.1,
+      "lambda": 1.0,
+      "seed": 0,
+      "avg_error": 0.3379437434380988,
+      "final_dimension": 10
+    },
+    {
+      "n_classes": 3,
+      "noise": 0.1,
+      "lambda": 1.0,
+      "seed": 1,
+      "avg_error": 1.493523067520214,
+      "final_dimension": 10
+    },
+    {
+      "n_classes": 3,
+      "noise": 0.1,
+      "lambda": 1.0,
+      "seed": 2,
+      "avg_error": 0.3207317825463622,
+      "final_dimension": 10
+    },
+    {
+      "n_classes": 5,
+      "noise": 0.3,
+      "lambda": 0.001,
+      "seed": 0,
+      "avg_error": 1.3806463616568732,
+      "final_dimension": 506
+    },
+    {
+      "n_classes": 5,
+      "noise": 0.3,
+      "lambda": 0.001,
+      "seed": 1,
+      "avg_error": 1.1664408103330746,
+      "final_dimension": 509
+    },
+    {
+      "n_classes": 5,
+      "noise": 0.3,
+      "lambda": 0.001,
+      "seed": 2,
+      "avg_error": 1.2934165796933035,
+      "final_dimension": 509
+    },
+    {
+      "n_classes": 5,
+      "noise": 0.3,
+      "lambda": 0.1,
+      "seed": 0,
+      "avg_error": 1.3806463616568732,
+      "final_dimension": 360
+    },
+    {
+      "n_classes": 5,
+      "noise": 0.3,
+      "lambda": 0.1,
+      "seed": 1,
+      "avg_error": 1.1664408103330746,
+      "final_dimension": 334
+    },
+    {
+      "n_classes": 5,
+      "noise": 0.3,
+      "lambda": 0.1,
+      "seed": 2,
+      "avg_error": 1.2934165796933035,
+      "final_dimension": 352
+    },
+    {
+      "n_classes": 5,
+      "noise": 0.3,
+      "lambda": 1.0,
+      "seed": 0,
+      "avg_error": 1.3806463616568732,
+      "final_dimension": 10
+    },
+    {
+      "n_classes": 5,
+      "noise": 0.3,
+      "lambda": 1.0,
+      "seed": 1,
+      "avg_error": 1.1664408103330746,
+      "final_dimension": 10
+    },
+    {
+      "n_classes": 5,
+      "noise": 0.3,
+      "lambda": 1.0,
+      "seed": 2,
+      "avg_error": 1.2934165796933035,
+      "final_dimension": 10
+    },
+    {
+      "n_classes": 10,
+      "noise": 0.5,
+      "lambda": 0.001,
+      "seed": 0,
+      "avg_error": 1.9912360750669842,
+      "final_dimension": 506
+    },
+    {
+      "n_classes": 10,
+      "noise": 0.5,
+      "lambda": 0.001,
+      "seed": 1,
+      "avg_error": 1.7974768039052278,
+      "final_dimension": 509
+    },
+    {
+      "n_classes": 10,
+      "noise": 0.5,
+      "lambda": 0.001,
+      "seed": 2,
+      "avg_error": 2.003756945019658,
+      "final_dimension": 509
+    },
+    {
+      "n_classes": 10,
+      "noise": 0.5,
+      "lambda": 0.1,
+      "seed": 0,
+      "avg_error": 1.9912360750669842,
+      "final_dimension": 360
+    },
+    {
+      "n_classes": 10,
+      "noise": 0.5,
+      "lambda": 0.1,
+      "seed": 1,
+      "avg_error": 1.7974768039052278,
+      "final_dimension": 334
+    },
+    {
+      "n_classes": 10,
+      "noise": 0.5,
+      "lambda": 0.1,
+      "seed": 2,
+      "avg_error": 2.003756945019658,
+      "final_dimension": 352
+    },
+    {
+      "n_classes": 10,
+      "noise": 0.5,
+      "lambda": 1.0,
+      "seed": 0,
+      "avg_error": 1.9912360750669842,
+      "final_dimension": 10
+    },
+    {
+      "n_classes": 10,
+      "noise": 0.5,
+      "lambda": 1.0,
+      "seed": 1,
+      "avg_error": 1.7974768039052278,
+      "final_dimension": 10
+    },
+    {
+      "n_classes": 10,
+      "noise": 0.5,
+      "lambda": 1.0,
+      "seed": 2,
+      "avg_error": 2.003756945019658,
+      "final_dimension": 10
+    }
+  ]
+}
