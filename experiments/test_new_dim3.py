@@ -4,7 +4,10 @@
 
 import numpy as np
 import sys
-sys.path.insert(0, 'F:/fcrs-v5')
+import os
+
+# 相对导入
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import FCRSystem
 
