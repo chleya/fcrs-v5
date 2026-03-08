@@ -1,0 +1,27 @@
+{
+  "version": "5.1",
+  "default": {
+    "pool_capacity": 5,
+    "vector_dim": 10,
+    "spawn_reuse_threshold": 2,
+    "min_compression_gain": 0.001
+  },
+  "optimal": {
+    "pool_capacity": 10,
+    "vector_dim": 10,
+    "spawn_reuse_threshold": 2,
+    "min_compression_gain": 0.001
+  },
+  "high_activity": {
+    "pool_capacity": 10,
+    "vector_dim": 10,
+    "spawn_reuse_threshold": 1,
+    "min_compression_gain": 0.001
+  },
+  "low_activity": {
+    "pool_capacity": 5,
+    "vector_dim": 10,
+    "spawn_reuse_threshold": 5,
+    "min_compression_gain": 0.01
+  }
+}

@@ -1,3 +1,2 @@
-# FCRS-v5 Requirements
-
-numpy>=1.20.0
+numpy>=1.20
+matplotlib>=3.5
