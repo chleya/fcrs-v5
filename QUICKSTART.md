@@ -1,36 +1,54 @@
 # FCRS-v5 快速开始
 
-## 安装
+## 5分钟入门
+
+### 1. 运行示例
 
 ```bash
-pip install -r requirements.txt
+python core.py
 ```
 
-## 基本使用
+### 2. 运行测试
 
-```python
-from fcrs import FCRS
-
-# 创建系统
-fcrs = FCRS(pool_capacity=5, input_dim=10, lr=0.01)
-
-# 运行
-for i in range(1000):
-    x = generate_input()  # 你的输入数据
-    fcrs.step(x)
-
-# 获取结果
-print(fcrs.get_avg_error())
+```bash
+python -m pytest tests/
 ```
 
-## 参数
+### 3. 运行实验
 
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| pool_capacity | 5 | 表征池容量 |
-| input_dim | 10 | 输入维度 |
-| lr | 0.01 | 学习率 |
+```bash
+# 对比实验
+python experiments/comparison.py
+
+# MNIST测试
+python experiments/real_mnist.py
+```
 
 ---
 
-*快速开始 v1.0 - 2026-03-08*
+## 核心参数
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| lambda_val | 0.5 | 容量成本 |
+| dimension | 10 | 初始维度 |
+| learning_rate | 0.1 | 学习率 |
+
+---
+
+## 目录结构
+
+```
+fcrs-v5/
+├── core.py          # 核心代码
+├── experiments/     # 实验代码
+├── docs/           # 文档
+└── datasets/      # 数据集
+```
+
+---
+
+## 下一步
+
+- 阅读 CONCEPT.md 了解理论
+- 阅读 TECHNICAL_REPORT.md 了解实验
