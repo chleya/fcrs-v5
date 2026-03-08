@@ -1,178 +1,130 @@
-# FCRS-v5.1 有限竞争表征系统
+# FCRS-v5 完整技术文档
 
-## 项目代号
+## 系统概述
 
-**FCRS-v5.1** (Finite Competitive Representation System)
+FCRS (Fixed Capacity Representation System) v5.1 是一个基于"截断-竞争-回流"机制的自适应表征维度系统。
 
-## 核心命题
+### 核心理念
 
-> 有限物质系统是否能够在资源约束和内部竞争的条件下，自发形成稳定且可复用的结构表征？
-
-## 核心哲学
-
-**约束不是智能发展的障碍，而是智能形成的必要条件。**
-
-正如生物进化在资源受限的环境中创造了复杂的生命形态，有限的认知资源也将迫使智能系统发展出高效、可复用的抽象表征。
+> 智能 = 能量截断 + 信息截断 + 回流维持
 
 ---
 
 ## 架构
 
 ```
-┌─────────────────────────────────────┐
-│           环境环 (Environment Loop)   │
-│  产生输入信号 xₜ，提供残差信号       │
-└────────────────┬────────────────────┘
+┌─────────────────────────────────────────┐
+│           Environment Loop               │
+│            (环境输入生成)                 │
+└────────────────┬────────────────────────┘
                  │
                  ▼
-┌─────────────────────────────────────┐
-│      表征池 (Representation Pool)    │
-│  存储候选表征，容量N有限             │
-└────────────────┬────────────────────┘
+┌─────────────────────────────────────────┐
+│         Representation Pool              │
+│  ┌─────────────────────────────────┐   │
+│  │ Representation 1: dim=10        │   │
+│  │ Representation 2: dim=11        │   │
+│  │ ...                             │   │
+│  └─────────────────────────────────┘   │
+│         (表征池 + 预算约束)              │
+└────────────────┬────────────────────────┘
                  │
                  ▼
-┌─────────────────────────────────────┐
-│      进化引擎 (Evolution Engine)     │
-│  变异-选择-保留 + 新维度诞生          │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│         Evolution Engine                │
+│  - 竞争(Competition)                     │
+│  - 复用(Reuse)                          │
+│  - 新维度诞生(Spawn)                    │
+└─────────────────────────────────────────┘
 ```
 
 ---
 
-## 关键数学量
+## 核心参数
 
-| 量 | 公式 | 含义 |
-|----|------|------|
-| 适应度 F | F = -‖x - ŵ‖² | 当前预测能力 |
-| 复用频率 R | R = A/t | 跨情境使用率 |
-| 持久度 P | P = α·F̄ + β·R - γ·Cost | 综合存活能力 |
-| 压缩增益 G | G = (E_old - E_new) / E_old | 新维度价值 |
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| pool_capacity | 表征池容量 | 5 |
+| vector_dim | 初始向量维度 | 10 |
+| spawn_reuse_threshold | 复用阈值 | 2 |
+| min_compression_gain | 最小压缩增益 | 0.001 |
 
 ---
 
-## v5.1 新维度机制 (2026.3)
+## API
 
-### 核心机制
-
-v5.1引入了三个互相咬合的机制，实现了表征空间的**自适应扩展**：
-
-#### 1. 新维度诞生
+### 创建系统
 
 ```python
-def try_spawn_new_dim(rep, recent_residuals):
-    if rep.reuse < threshold:  # 复用阈值
-        return False
-    
-    old_error = mean(abs(residuals))
-    new_dim = residual_direction + noise
-    new_vector = append(old_vector, new_dim)
-    new_error = mean(abs(residuals - new_vector))
-    
-    gain = (old_error - new_error) / old_error
-    
-    if gain > min_compression_gain:  # 压缩增益阈值
-        accept new dimension
-        return True
-    return False
+from core import FCRSystem
+
+system = FCRSystem(pool_capacity=5, vector_dim=10)
 ```
 
-**参数配置**：
-- `spawn_reuse_threshold = 5`（复用次数阈值）
-- `min_compression_gain = 0.001`（压缩增益阈值）
-- `dim_cost = 1.0`（每加1维扣1单位预算）
-
-#### 2. 残差信号
-
-环境环输出"当前表征联合解释不了的部分"：
+### 运行
 
 ```python
-def get_input_and_residual(self, pool_prediction):
-    x = self.generate_input()
-    residual = x - pool_prediction  # 未解释的部分
-    return x, residual
+for i in range(1000):
+    system.step()
 ```
 
-#### 3. 维度竞争（清理）
-
-定期清理低贡献维度：
+### 获取统计
 
 ```python
-def prune_low_contrib_dims():
-    for r in pool:
-        useless_mask = r.dim_contrib < max_contrib * 0.05
-        r.vector[useless_mask] = 0.0  # 置零
+stats = system.get_statistics()
+print(stats['total_dims'])  # 总维度
+print(stats['new_dims_born'])  # 新维度诞生数
 ```
 
 ---
 
-### 测试结果
+## 实验结果
 
-**300步运行日志**：
+### 长期稳定性
 
-```
-运行300步...
-v 新维度诞生! 压缩增益=0.312, 总维=11
-v 新维度诞生! 压缩增益=0.033, 总维=11
+| 步数 | 维度 | 状态 |
+|------|------|------|
+| 500 | 100 | 扩张 |
+| 2000 | 100 | 稳定 |
+| 5000 | 102 | 准收敛 |
 
-结果:
-  总维度: 30
-  新维度诞生: 2
-```
+### 最佳配置
 
-**结论**：300步成功诞生2个新维度，压缩增益分别为0.312和0.033，证明了自发涌现的潜力。
-
----
-
-## 验证目标
-
-| # | 目标 | 状态 |
-|---|------|------|
-| 1 | 原型表征的涌现 | ⚠️ 部分通过 |
-| 2 | 噪声表征的灾难性遗忘 | ✅ 通过 |
-| 3 | 动态平衡 | ⚠️ 部分通过 |
-| 4 | 新维度涌现 (v5.1) | ✅ 通过 |
+- pool_capacity = 10
+- spawn_reuse_threshold = 2
+- min_compression_gain = 0.001
 
 ---
 
-## 目录结构
+## 文件结构
 
 ```
-fcrs-v5/
-├── core.py              # 核心代码 (v5.1)
-├── CONCEPT.md          # 概念文档
-├── README.md           # 本文件
-├── paper/
-│   └── PAPER_FULL.md   # 完整论文
-└── experiments/
-    ├── exp1_emergence.py    # 实验1
-    ├── exp2_forgetting.py    # 实验2
-    ├── exp3_balance.py       # 实验3
-    ├── test_new_dim3.py      # v5.1测试
-    └── REPORT_FULL.md        # 实验报告
+FCRS-v5/
+├── core.py              # 核心系统
+├── demo.py              # 演示脚本
+├── EXPERIMENT_SUMMARY.md # 实验总结
+├── PAPER_OUTLINE.md     # 论文大纲
+├── PAPER.md             # 完整论文
+├── neural_extension/    # 神经网络扩展
+├── multi_agent/         # 多智能体
+├── experiments/         # 实验代码
+│   ├── benchmark.py
+│   ├── ablation_test.py
+│   ├── test_sensitivity.py
+│   └── ...
+└── paper/               # 图表
+    ├── fig_dimension_evolution.png
+    └── ...
 ```
 
 ---
 
-## 运行
+## 引用
 
-```bash
-# 测试v5.1
-py -3.14 core.py
-
-# 运行实验
-py -3.14 experiments/test_new_dim3.py
+```bibtex
+@article{fcrs-v5,
+  title={截断与反馈：面向自适应表征维度的智能系统},
+  author={Chen, Leiyang},
+  year={2026}
+}
 ```
-
----
-
-## 下一步计划
-
-1. [ ] 可视化维度演化
-2. [ ] 长时运行测试（2000步）
-3. [ ] 噪声环境测试
-4. [ ] Ablation对比实验
-5. [ ] 原型提取与复用
-
----
-
-*更新时间: 2026-03-07*
