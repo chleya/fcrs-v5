@@ -16,6 +16,14 @@ for i in range(1000):
 print(fcrs.get_avg_error())
 ```
 
+### One-Click Reproduce Core Results
+
+```bash
+python run_experiment.py
+```
+
+This will reproduce the core milestone results: prediction-oriented selection achieves +22% success rate improvement over reconstruction-oriented selection in multi-step decision tasks.
+
 ## Core Results
 
 ### v5.1 Baseline (Static Single-Step Task)
