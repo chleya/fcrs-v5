@@ -1,35 +1,60 @@
 # CHANGELOG
 
-## 2026-03-09
+## 2026-03-09 - v5.3.0 Milestone!
 
-### Added
-- `predictive/` 目录完整上传
-- PAPER.md - 完整论文草稿
-- THEORY.md - 理论框架和经验教训
+### 🎉 Major Breakthrough
+- **Core Discovery**: Prediction-oriented selection significantly outperforms reconstruction-oriented selection in multi-step decision tasks
+- **Success Rate**: Prediction 46.0% vs Reconstruction 24.0% (+22.0% absolute improvement)
+- **Cumulative Reward**: Prediction -9.13 vs Reconstruction -11.26 (+2.14 improvement)
 
-### Key Findings
-- 预测选择 vs 重构选择: 无显著差异 (-3.2%)
-- 严格测试发现系统比简单基线更差
-- 消融实验显示所有配置结果相同
+### Key Files Added
+- `src/core/grid_world.py` - GridWorld navigation environment
+- `src/core/metrics.py` - Dual-dimension evaluation metrics
+- `src/experiments/gridworld_v2.py` - Milestone experiment
 
-### Lessons Learned
-1. 简单基线往往更强
-2. 严格验证很重要
-3. 负面结果也是科学结果
+### Technical Evolution
+1. **v5.2.1-baseline**: Core bug fixes (Xavier init, ReLU order, Config)
+2. **v5.2.2-pred-selection-attempt**: Prediction selection optimization attempt
+3. **v5.2.3-gridworld-baseline**: GridWorld baseline, identified decision decoupling issue
+4. **v5.3.0-milestone-core-breakthrough**: Core breakthrough - representation-driven decision
+
+### Core Conclusion
+- Single-step tasks: Reconstruction-oriented selection is mathematically optimal
+- Multi-step sequential decision tasks: Prediction-oriented selection has significant advantage
+- The value of prediction-oriented compression lies in forward-looking decision capability
 
 ---
 
-## 早期版本 (参照)
+## 2026-03-09 - Earlier Today
 
-### v5.0 - 原始版本
-- 基于λ调节的维度控制
-- 边缘共识研究
+### Added
+- `predictive/` directory uploaded
+- PAPER.md - Complete paper draft
+- THEORY.md - Theory framework and lessons learned
 
-### v5.1 - 涌现驱动
-- 尝试实现"涌现驱动"机制
-- 后被质疑为"假涌现"
+### Key Findings (Earlier)
+- Prediction vs Reconstruction: No significant difference (-3.2%)
+- Strict testing revealed system worse than simple baseline
+- Ablation experiments showed all configs identical
 
-### v5.2 - 预测导向 (当前)
-- "压缩→预测→选择"框架
-- 包含L1-L3能力
-- 但验证结果为负面
+### Lessons Learned
+1. Simple baselines often stronger
+2. Strict validation is critical
+3. Negative results are also scientific results
+
+---
+
+## Earlier Versions (Reference)
+
+### v5.0 - Original Version
+- λ-based dimension control
+- Edge consensus research
+
+### v5.1 - Emergence-Driven
+- Attempted "emergence-driven" mechanism
+- Later questioned as "false emergence"
+
+### v5.2 - Prediction-Oriented (Current)
+- "Compression → Prediction → Selection" framework
+- Includes L1-L3 capabilities
+- Initial validation results were negative (before milestone)

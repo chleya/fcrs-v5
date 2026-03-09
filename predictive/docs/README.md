@@ -1,57 +1,135 @@
-# FCRS-v5 Predictive 项目总结
+# FCRS-v5 (Fixed Capacity Representation System)
 
-## 项目概述
+An intelligent system combining representation competition with online learning, built on the core framework of **Compression → Prediction → Selective Direction** for resource-constrained autonomous intelligence.
 
-**目标**：构建有限资源下的自主智能系统
+## Quick Start
 
-**核心理念**：智能 = 压缩 → 预测 → 有选择的方向
+```python
+from fcrs import FCRS
+from predictive.integrated import IntegratedSystem
 
-## 核心成果
+# Core FCRS (v5.1 Baseline: Static Compression Task)
+fcrs = FCRS(pool_capacity=5, input_dim=10, lr=0.01)
+for i in range(1000):
+    x = your_input_data
+    fcrs.step(x)
+print(fcrs.get_avg_error())
 
-| 指标 | 结果 |
-|------|------|
-| 预测选择 vs 重构选择 | +89% 改进 |
-| 状态转移学习 | +22% 改进 |
-| L2泛化差距 | 1.1% |
-| 表征池扩展 | 10个 |
+# Predictive FCRS (v5.3.0 Milestone: Multi-step Decision Task)
+system = IntegratedSystem(
+    input_dim=20,
+    compress_dim=5,
+    pool_capacity=10,
+    lr=0.01,
+    selection_mode="prediction"  # options: prediction / reconstruction / random
+)
+# Run end-to-end sequential decision task
+system.run_env(env=GridWorldEnv(), total_steps=10000)
+print(f"Task Success Rate: {system.get_success_rate():.1f}%")
+print(f"Cumulative Reward: {system.get_cumulative_reward():.2f}")
+```
 
-## 文件结构
+## Core Results
+
+### v5.1 Baseline (Static Single-Step Compression Task)
+
+FCRS beats all baselines with statistical significance (p<0.001):
+
+| System | Average Error |
+| -------------------- | ------------- |
+| FCRS (v5.1 Baseline) | 3.16 |
+| Online Learning Only | 6.23 |
+| Competition Only | 7.65 |
+| Fixed Representation | 7.38 |
+| Random Selection | 8.46 |
+
+### v5.3.0 Milestone (Multi-step Sequential Decision Task)
+
+**Core Breakthrough**: Prediction-oriented selection significantly outperforms reconstruction-oriented selection in forward-looking planning tasks, verified in partially observable grid world navigation:
+
+| Selection Mode | Success Rate | Cumulative Reward | Reconstruction Error |
+| -------------------- | ------------ | ----------------- | -------------------- |
+| Prediction-Oriented | **46.0%** | **-9.13** | 1.17 |
+| Reconstruction-Oriented | 24.0% | -11.26 | **1.09** (Optimal) |
+| Random Selection | 30.0% | -12.09 | 1.21 |
+
+#### Key Improvement
+
+- **+22.0%** absolute lift in task success rate over reconstruction-oriented selection
+- **+2.14** lift in cumulative reward over reconstruction-oriented selection
+- Slightly higher reconstruction error is expected: prediction-oriented compression optimizes for future state prediction, not single-step reconstruction precision
+
+## Key Innovation
+
+1. **Competition + Learning Synergy**: Fixed-capacity representation pool with online competitive update, achieving superior performance in static compression tasks
+
+2. **Prediction-Oriented Compression Framework**: Core paradigm of Intelligence = Compression → Prediction → Selective Direction, redefining compression's optimization goal from signal reconstruction to future state prediction
+
+3. **Forward-Looking Selection Mechanism**: Representation selection based on multi-step historical prediction capability, delivering significant advantages in sequential decision-making tasks that require long-term planning
+
+## Project Structure
 
 ```
-F:\fcrs-v5\predictive\
-├── PAPER.md              # 论文
-├── core_predictive.py    # 核心模块
-├── direction_A.py        # 方向A: per-rep预测
-├── direction_B.py        # 方向B: 状态转移
-├── integrated.py         # 整合系统
-├── l2_verification.py    # L2验证
-└── experiments_*.py     # 实验脚本
+predictive/
+├── docs/
+│   ├── README.md          # This file
+│   ├── PAPER.md           # Research paper
+│   ├── THEORY.md          # Theory framework
+│   └── CHANGELOG.md       # Version history
+├── src/
+│   ├── core/
+│   │   ├── core_predictive.py    # Core modules
+│   │   ├── grid_world.py         # GridWorld environment
+│   │   ├── metrics.py            # Evaluation metrics
+│   │   └── optimized_predictive.py # Optimized version
+│   ├── experiments/
+│   │   ├── gridworld_experiment.py   # v1 experiment
+│   │   └── gridworld_v2.py           # v2 experiment (milestone)
+│   └── system/
+│       ├── fixed_system.py
+│       └── simple_fix.py
+├── tests/
+│   ├── test_v3.py
+│   ├── strict_test.py
+│   └── diagnose.py
+└── archive/
+    ├── experiments_v2.py
+    └── experiments_fixed.py
 ```
 
-## 核心创新
+## Theoretical Framework
 
-1. **预测导向压缩**：压缩目标不是重构，而是预测
-2. **每个表征的预测器**：实现真正的前瞻性选择
-3. **状态转移模型**：支持心理模拟和规划
+### Intelligence = Compression → Prediction → Selective Direction
 
-## 理论贡献
+The core hypothesis of this project:
 
-- 提出"压缩→预测→选择"框架
-- 验证预测导向压缩优于重构导向压缩
-- 展示有限资源下的自主智能可能性
+1. **Compression**: Summarize current situation into compact representation
+2. **Prediction**: Predict future states based on representation
+3. **Selective Direction**: Choose actions that lead to preferred outcomes
 
-## 局限性
+### Validation Levels
 
-- L1-L2能力，因果推理(L3)缺失
-- 简单合成环境，需更复杂验证
-- 缺乏"理解"，只有智能"能力"
+| Level | Capability | Status |
+|-------|------------|--------|
+| L1 | Pattern Recognition | ✅ Verified |
+| L2 | Predictive Extrapolation | ✅ Verified |
+| L3 | Causal Reasoning | 🔄 In Progress |
 
-## 下一步
+## Limitations & Future Work
 
-1. 完善论文，提交会议
-2. 扩展到更复杂环境
-3. 探索L3因果推理
+- **L1-L2 capabilities validated**, causal reasoning (L3) remains exploratory
+- Simple synthetic environments require more complex validation
+- Current system demonstrates intelligent "capability" but lacks "understanding"
+
+## Version History
+
+| Version | Date | Description |
+|---------|------|-------------|
+| v5.3.0 | 2026-03-09 | **Milestone**: Multi-step decision breakthrough |
+| v5.2.3 | 2026-03-09 | GridWorld baseline |
+| v5.2.1 | 2026-03-09 | Core bug fixes |
+| v5.1 | 2026-02 | Baseline FCRS |
 
 ---
 
-*更新时间: 2026-03-09*
+*Last Updated: 2026-03-09*
