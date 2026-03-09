@@ -1,179 +1,109 @@
-# FCRS-v5 完整技术报告
+# FCRS-v5 Final Project Report
 
-**日期**: 2026-03-08  
-**版本**: Final
+## Project Overview
 
----
+FCRS (Fixed Capacity Representation System) is an online learning intelligent system built for resource-constrained autonomous scenarios. The project is divided into two core research phases:
 
-## 摘要
+1. **v5.1 Baseline**: Verify the synergy of representation competition + online learning in static single-step compression tasks
+2. **v5.3.0 Milestone**: Propose and verify the "Compression → Prediction → Selective Direction" core framework, validate the superiority of prediction-oriented compression in multi-step sequential decision-making tasks
 
-本项目研究有限竞争表征系统(FCRS)中的容量调节机制。我们发现：
+## Core Theoretical Framework
 
-1. **λ (capacity cost) 是唯一有效的维度调节器**
-2. **维度在困难任务下有价值，在简单任务下饱和**
-3. **出现Phase Transition现象**
-4. **选择机制需要Cosine Similarity**
+### Core Paradigm
 
----
+We redefine the essence of resource-constrained autonomous intelligence:
 
-## 一、引言
+**Intelligence = Compression → Prediction → Selective Direction**
 
-### 1.1 研究问题
+- **Compression**: Map high-dimensional raw input to a low-dimensional fixed-capacity representation pool
+- **Prediction**: Equip each representation with an independent predictor to model future state transition rules
+- **Selection**: Select the optimal representation for decision-making based on forward-looking prediction capability, rather than just current reconstruction precision
 
-> 有限物质系统是否可以通过表征扩张实现持续提升的泛化能力？
+### Boundary Conclusion
 
-### 1.2 核心贡献
+1. **In single-step static reconstruction tasks**: Reconstruction-oriented compression is the mathematical optimal solution for single-step reconstruction error, and prediction-oriented compression cannot surpass it in reconstruction precision
 
-1. 实现了完整的FCRS系统
-2. 验证了λ调节机制
-3. 发现了容量饱和现象
-4. 验证了维度-难度的依赖关系
+2. **In multi-step sequential decision-making tasks requiring forward-looking planning**: Prediction-oriented compression significantly outperforms reconstruction-oriented compression in task success rate, cumulative reward and long-term generalization
 
----
+## Version Iteration & Release History
 
-## 二、理论框架
+| Version Tag | Release Content |
+| ------------------------------------ | --------------- |
+| v5.3.0-milestone-core-breakthrough | Core Milestone: Verified prediction-oriented selection's significant advantage in multi-step decision tasks, +22% success rate lift |
+| v5.2.3-gridworld-baseline | Grid world multi-step task baseline, fixed decoupling issue between representation selection and action decision |
+| v5.2.2-pred-selection-attempt | Prediction selection strategy optimization, full parameter scan of multi-step horizon and dual-objective loss |
+| v5.2.1-baseline | Core Bug Fix Baseline: Fixed weight initialization, state transition model logic, unified config management |
+| v5.1.0-base | Initial FCRS v5 release: Core competition + learning framework, static task baseline verification |
 
-### 2.1 表征达尔文主义
+## Core Experimental Results
 
-- 涌现驱动 vs 优化驱动
-- 容量-误差权衡 (Rate-Distortion)
+### v5.1 Baseline (Static Single-Step Task)
 
-### 2.2 核心方程
+| System | Average Error |
+| -------------------- | ------------- |
+| FCRS (v5.1 Baseline) | 3.16 |
+| Online Learning Only | 6.23 |
+| Competition Only | 7.65 |
+| Fixed Representation | 7.38 |
+| Random Selection | 8.46 |
 
-```
-dD/dt = E - P
+### v5.3.0 Milestone (Multi-step Sequential Decision Task)
 
-spawn if Δfitness > λ
-prune if importance < θ
-```
+| Selection Mode | Success Rate | Cumulative Reward | Reconstruction Error |
+| -------------------- | ------------ | ----------------- | -------------------- |
+| Prediction-Oriented | **46.0%** | **-9.13** | 1.17 |
+| Reconstruction-Oriented | 24.0% | -11.26 | **1.09** (Optimal) |
+| Random Selection | 30.0% | -12.09 | 1.21 |
 
----
+**Key Improvement**: +22.0% absolute lift in success rate
 
-## 三、系统实现
-
-### 3.1 三层架构
-
-```
-Environment → Representation → Evolution
-```
-
-### 3.2 选择机制
-
-**关键修复**: 使用Cosine Similarity代替Dot Product
-
-```python
-def select(x):
-    score = dot(v, x) / (||v|| * ||x||)
-```
-
----
-
-## 四、实验结果
-
-### 4.1 Phase 1: 维度扩张
-
-| 配置 | 维度 | 误差 |
-|------|------|------|
-| 动态 | 510 | 过拟合 |
-| 固定 | 10 | 基准 |
-
-### 4.2 Phase 2: λ调节
-
-| λ | 维度 | 行为 |
-|----|------|------|
-| 0 | 510 | 无限扩张 |
-| 0.1 | 349 | 调节 |
-| 1.0 | 10 | 阻止 |
-
-### 4.3 Phase 3: 竞争强度
-
-**结论**: 竞争不影响维度
-
-### 4.4 Phase 4: 任务复杂度
-
-**结论**: 维度不随任务变化
-
-### 4.5 Phase 5: λ Phase Transition
-
-| 区间 | Δ维度 |
-|------|-------|
-| 0.01→0.1 | -142 |
-| 0.1→1.0 | -339 |
-
-### 4.6 验证: 难度依赖
-
-| 任务 | λ=0维度 | λ=0.6维度 | Error变化 |
-|------|---------|-----------|-----------|
-| Easy | 10 | 10 | 0 |
-| Medium | 20 | 10 | **0.79** |
-| Hard | 50 | 10 | **2.29** |
-
----
-
-## 五、核心发现
-
-### 5.1 λ是唯一有效的容量调节器
-
-- Loss penalty: ❌ 无效
-- Competition: ❌ 无效
-- **λ (structural cost): ✅ 有效**
-
-### 5.2 容量饱和现象
-
-- 简单任务下，增加维度不降低误差
-- 对应Rate-Distortion理论
-
-### 5.3 难度依赖
-
-- 困难任务下，维度有价值
-- 体现了capacity-performance tradeoff
-
----
-
-## 六、论文结构建议
+## File Structure
 
 ```
-1. Abstract
-2. Introduction
-   - Problem: finite capacity systems
-   - Question: can expansion improve generalization?
-3. Related Work
-   - Neural Darwinism
-   - Growing Networks
-   - Rate-Distortion Theory
-4. Model
-   - FCRS Architecture
-   - Selection Mechanism (Cosine Similarity)
-   - Structural Dynamics
-5. Experiments
-   - Phase 1-5 Results
-   - Key Finding: λ controls capacity
-6. Discussion
-   - Capacity Saturation
-   - Task Difficulty Dependence
-   - Limitations
-7. Conclusion
+fcrs-v5/
+├── fcrs.py                         # Core FCRS v5.1 baseline module
+├── core_improved.py                # Optimized FCRS full implementation
+├── predictive/                     # Predictive FCRS v5.3.0 core module
+│   ├── src/
+│   │   ├── core/
+│   │   │   ├── core_predictive.py          # Core algorithm
+│   │   │   ├── grid_world.py              # GridWorld environment
+│   │   │   ├── metrics.py                 # Evaluation metrics
+│   │   │   └── optimized_predictive.py   # Optimized version
+│   │   └── experiments/
+│   │       ├── gridworld_experiment.py    # v1 experiment
+│   │       └── gridworld_v2.py           # v2 experiment (milestone)
+│   ├── tests/                      # Unit tests & validation
+│   ├── docs/                       # Theory & paper drafts
+│   ├── archive/                    # Historical versions
+│   └── integrated.py              # End-to-end integrated system
+├── experiments/                    # Full validation experiments
+│   ├── rigorous_improved.py      # v5.1 baseline validation
+│   └── gridworld_*.py            # v5.3.0 multi-step task experiments
+├── THEORY.md                     # Core theoretical framework
+├── FINAL_REPORT.md               # This file
+├── requirements.txt               # Dependency management
+└── README.md                     # Project overview
 ```
 
----
+## Key Innovation Points
 
-## 七、工程教训
+1. **Competition + Learning Synergy**: Fixed-capacity representation pool with online competitive update, achieving superior performance in static compression tasks
 
-| 教训 | 应用 |
-|------|------|
-| 现象→假设 | 先验证再优化 |
-| 负面结果 | 诚实报告 |
-| 选择机制 | Cosine > Dot |
-| 任务难度 | 影响系统价值 |
+2. **Prediction-Oriented Compression Framework**: Redefining compression's optimization goal from signal reconstruction to future state prediction
 
----
+3. **Forward-Looking Selection Mechanism**: Representation selection based on multi-step historical prediction capability, delivering significant advantages in sequential decision-making tasks
 
-## 八、代码位置
+## Limitations & Future Work
 
-- GitHub: https://github.com/chleya/fcrs-v5
-- 核心: core_v52.py
-- 实验: experiments/
+- **L1-L2 capabilities validated**, causal reasoning (L3) remains exploratory
+- Simple synthetic environments require more complex validation
+- Current system demonstrates intelligent "capability" but lacks "understanding"
 
----
+## License
 
-*报告完成于 2026-03-08*
+MIT License
+
+## Latest Version
+
+v5.3.0 - 2026-03-09
