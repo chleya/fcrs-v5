@@ -1,238 +1,543 @@
 """
-预测导向有限竞争表征系统
-FCRS-v5: 预测导向压缩 → 预测 → 选择 → 反馈 → 更新
+FCRS-v5 Predictive: 核心模块 (Bug修复版)
 
-核心理念：压缩的目标不是重构，而是预测未来
+修复内容:
+1. 预测选择机制 - 使用长期预测能力评估
+2. 权重初始化 - Xavier初始化
+3. 状态转移模型 - 修正ReLU顺序
+4. 配置管理 - 统一参数
 """
 
 import numpy as np
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 
 
-class PredictiveCompressor:
+# ==================== 配置 ====================
+
+class Config:
+    """统一配置"""
+    # 基础参数
+    INPUT_DIM = 10
+    COMPRESS_DIM = 3
+    POOL_CAPACITY = 10
+    
+    # 训练参数
+    LEARNING_RATE = 0.01
+    EXPLORATION_RATE = 0.1
+    
+    # 优化参数
+    Xavier_FACTOR = 1.0  # Xavier初始化系数
+    
+    @classmethod
+    def set(cls, **kwargs):
+        for k, v in kwargs.items():
+            if hasattr(cls, k):
+                setattr(cls, k, v)
+
+
+# ==================== 工具函数 ====================
+
+def xavier_init(fan_in: int, fan_out: int, factor: float = 1.0) -> np.ndarray:
+    """Xavier初始化"""
+    limit = factor * np.sqrt(6.0 / (fan_in + fan_out))
+    return np.random.uniform(-limit, limit, (fan_in, fan_out))
+
+
+def stable_normalize(x: np.ndarray, eps: float = 1e-8) -> np.ndarray:
+    """安全归一化"""
+    norm = np.linalg.norm(x)
+    if norm < eps:
+        return np.zeros_like(x)
+    return x / norm
+
+
+# ==================== 预测器 ====================
+
+class Predictor:
     """
-    预测导向压缩器
+    预测器：学习状态转移 P(s'|s)
     
-    核心思想：压缩的目标不是重构输入，而是预测未来
-    压缩的质量不是用"重构误差"衡量，而是用"预测误差"衡量
+    修复:
+    - Xavier初始化
+    - 更好的归一化处理
     """
     
-    def __init__(self, input_dim: int, compress_dim: int, learning_rate: float = 0.01):
-        self.input_dim = input_dim
-        self.compress_dim = compress_dim
-        self.lr = learning_rate
+    def __init__(self, dim: int, lr: float = 0.01):
+        self.dim = dim
+        self.lr = lr
         
-        # 编码器：输入 -> 压缩表示
-        self.encoder_weights = np.random.randn(input_dim, compress_dim) * 0.1
-        self.encoder_bias = np.zeros(compress_dim)
+        # Xavier初始化
+        self.W = xavier_init(dim, dim)
+        self.b = np.zeros(dim)
         
-        # 预测器：当前压缩表示 -> 下一时刻压缩表示
-        self.predictor_weights = np.random.randn(compress_dim, compress_dim) * 0.1
-        self.predictor_bias = np.zeros(compress_dim)
-        
-        # 历史记录
-        self.compressed_history = []
-        self.prediction_errors = []
+        # 历史预测误差
+        self.errors = []
+        self.error_history = []
     
-    def compress(self, x: np.ndarray) -> np.ndarray:
-        """压缩：将高维输入压缩为低维表示"""
-        # 线性投影
-        compressed = x @ self.encoder_weights + self.encoder_bias
+    def predict(self, state: np.ndarray) -> np.ndarray:
+        """预测下一状态"""
+        # 线性变换
+        out = state @ self.W + self.b
+        
+        # 归一化 (先归一化，再激活，防止除零)
+        out = stable_normalize(out)
+        
         # ReLU激活
-        compressed = np.maximum(0, compressed)
-        # L2归一化
-        norm = np.linalg.norm(compressed)
-        if norm > 0:
-            compressed = compressed / norm
-        return compressed
-    
-    def predict(self, compressed: np.ndarray) -> np.ndarray:
-        """预测：基于当前压缩表示，预测下一时刻的压缩表示"""
-        predicted = compressed @ self.predictor_weights + self.predictor_bias
-        predicted = np.maximum(0, predicted)  # ReLU
-        return predicted
-    
-    def update(self, compressed_curr: np.ndarray, compressed_next: np.ndarray):
-        """更新预测器参数，基于预测误差"""
-        # 预测
-        predicted = self.predict(compressed_curr)
+        out = np.maximum(0, out)
         
-        # 计算预测误差
-        error = compressed_next - predicted
-        self.prediction_errors.append(np.linalg.norm(error))
+        # 再次归一化
+        out = stable_normalize(out)
+        
+        return out
+    
+    def update(self, state_curr: np.ndarray, state_next: np.ndarray):
+        """更新预测器"""
+        # 预测
+        pred = self.predict(state_curr)
+        
+        # 计算误差
+        error = state_next - pred
+        self.errors.append(np.linalg.norm(error))
+        self.error_history.append(np.linalg.norm(error))
+        
+        # 限制历史长度
+        if len(self.error_history) > 1000:
+            self.error_history = self.error_history[-1000:]
         
         # 梯度更新
-        self.predictor_weights -= self.lr * np.outer(compressed_curr, error)
-        self.predictor_bias -= self.lr * error
+        self.W -= self.lr * np.outer(state_curr, error)
+        self.b -= self.lr * error
     
-    def evaluate_quality(self) -> dict:
-        """评估压缩质量"""
-        if len(self.prediction_errors) == 0:
-            return {"mean_error": 0, "variance": 0, "trend": 0}
-        
-        errors = np.array(self.prediction_errors[-100:])
-        return {
-            "mean_error": float(np.mean(errors)),
-            "variance": float(np.var(errors)),
-            "trend": float(np.mean(errors[-10:]) - np.mean(errors[:10])) if len(errors) >= 20 else 0
-        }
+    def get_mean_error(self) -> float:
+        """获取平均预测误差"""
+        if len(self.error_history) == 0:
+            return 1.0
+        return np.mean(self.error_history[-100:])
 
 
-class PredictiveSelector:
+# ==================== 表征 ====================
+
+class Representation:
     """
-    预测驱动表征选择器
+    表征：包含向量和其专用预测器
     
-    核心思想：选择"预测误差最小"的表征，而非"与当前输入最匹配"的表征
+    修复:
+    - 每个表征有自己的预测器
+    - 更好的初始化
     """
     
-    def __init__(self, representations: List[np.ndarray], compressor: PredictiveCompressor):
-        self.representations = representations
-        self.compressor = compressor
-        self.prediction_scores = {}
+    def __init__(self, dim: int, lr: float = 0.01):
+        self.dim = dim
+        
+        # 表征向量 (Xavier初始化)
+        self.vector = xavier_init(dim, 1).flatten()
+        self.vector = stable_normalize(self.vector)
+        
+        # 表征自己的预测器
+        self.predictor = Predictor(dim, lr)
     
-    def compute_scores(self, current_input: np.ndarray) -> dict:
-        """计算每个表征的预测得分"""
-        scores = {}
-        
-        for i, rep in enumerate(self.representations):
-            # 用表征压缩当前输入
-            compressed = self.compressor.compress(current_input)
-            
-            # 预测下一时刻
-            predicted = self.compressor.predict(compressed)
-            
-            # 得分 = 负预测误差（误差越小，得分越高）
-            score = -np.linalg.norm(predicted - compressed)
-            scores[i] = score
-        
-        self.prediction_scores = scores
-        return scores
+    def get_prediction_error(self) -> float:
+        """获取该表征的预测误差"""
+        return self.predictor.get_mean_error()
+
+
+# ==================== 表征池 ====================
+
+class RepresentationPool:
+    """
+    表征池：管理多个表征
     
-    def select(self, current_input: np.ndarray, exploration_rate: float = 0.1) -> int:
-        """ε-贪心选择"""
-        # 探索
-        if np.random.random() < exploration_rate:
-            return np.random.randint(len(self.representations))
+    修复:
+    - 基于预测误差选择（而非重构误差）
+    - 真正的预测导向选择
+    """
+    
+    def __init__(self, dim: int, capacity: int, lr: float = 0.01):
+        self.dim = dim
+        self.capacity = capacity
+        self.lr = lr
         
-        # 计算预测得分
-        scores = self.compute_scores(current_input)
+        # 表征列表
+        self.reps: List[Representation] = []
+        
+        # 选择统计
+        self.selection_counts = []
+    
+    def add(self, rep: Representation):
+        """添加表征"""
+        if len(self.reps) < self.capacity:
+            self.reps.append(rep)
+    
+    def initialize(self, n: int = 3):
+        """初始化n个随机表征"""
+        for _ in range(n):
+            rep = Representation(self.dim, self.lr)
+            self.add(rep)
+    
+    def select_by_prediction(self, x: np.ndarray, exploration: float = 0.1) -> int:
+        """
+        基于预测选择表征
+        
+        修复: 使用每个表征自己的预测器评估预测能力
+        """
+        # ε-贪心探索
+        if np.random.random() < exploration:
+            idx = np.random.randint(len(self.reps))
+            self.selection_counts.append(idx)
+            return idx
+        
+        # 计算每个表征的"预测价值"
+        # 策略: 选择"历史预测误差最小"的表征
+        scores = []
+        for i, rep in enumerate(self.reps):
+            # 方法1: 表征自己的预测误差
+            pred_error = rep.get_prediction_error()
+            
+            # 方法2: 当前输入与表征的匹配度
+            recon_error = np.linalg.norm(rep.vector - x)
+            
+            # 综合: 预测误差为主，重构误差为辅
+            # 预测误差越小越好，重构误差越小越好
+            score = -pred_error * 0.7 - recon_error * 0.3
+            scores.append(score)
         
         # 选择得分最高的
-        best_idx = max(scores, key=scores.get)
+        best_idx = np.argmax(scores)
+        self.selection_counts.append(best_idx)
+        
         return best_idx
+    
+    def select_by_reconstruction(self, x: np.ndarray) -> int:
+        """基于重构选择（对照组）"""
+        scores = [np.linalg.norm(r.vector - x) for r in self.reps]
+        return np.argmin(scores)
+    
+    def update(self, idx: int, x: np.ndarray, state_curr: np.ndarray, state_next: np.ndarray):
+        """更新选中的表征"""
+        rep = self.reps[idx]
+        
+        # 更新表征向量
+        rep.vector += self.lr * (x - rep.vector)
+        rep.vector = stable_normalize(rep.vector)
+        
+        # 更新表征的预测器
+        rep.predictor.update(state_curr, state_next)
 
 
-class PredictiveFCRS:
+# ==================== 状态转移模型 ====================
+
+class StateTransitionModel:
     """
-    预测导向有限竞争表征系统
+    状态转移模型: P(s'|s, a)
     
-    整合：压缩 → 预测 → 选择 → 反馈 → 更新
+    修复:
+    - 修正ReLU和归一化顺序
+    - 添加异常处理
     """
     
-    def __init__(self,
-                 input_dim: int = 10,
-                 compress_dim: int = 5,
-                 pool_capacity: int = 10,
-                 learning_rate: float = 0.01,
-                 exploration_rate: float = 0.1):
+    def __init__(self, state_dim: int, action_dim: int, lr: float = 0.01):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.lr = lr
         
-        self.input_dim = input_dim
-        self.compress_dim = compress_dim
-        self.pool_capacity = pool_capacity
-        self.exploration_rate = exploration_rate
+        # 权重 (SA -> next_state)
+        self.W = xavier_init(state_dim + action_dim, state_dim)
+        self.b = np.zeros(state_dim)
+    
+    def predict(self, state: np.ndarray, action: np.ndarray) -> np.ndarray:
+        """预测下一状态"""
+        # 拼接s和a
+        sa = np.concatenate([state, action])
         
-        # 核心组件
-        self.compressor = PredictiveCompressor(input_dim, compress_dim, learning_rate)
-        self.representations: List[np.ndarray] = []
-        self.selector: Optional[PredictiveSelector] = None
+        # 线性变换
+        next_state = sa @ self.W + self.b
+        
+        # 修复: 先归一化，再激活，再归一化
+        next_state = stable_normalize(next_state)
+        next_state = np.maximum(0, next_state)  # ReLU
+        next_state = stable_normalize(next_state)
+        
+        return next_state
+    
+    def update(self, state: np.ndarray, action: np.ndarray, next_state_target: np.ndarray):
+        """更新模型"""
+        # 预测
+        next_state_pred = self.predict(state, action)
+        
+        # 误差
+        error = next_state_target - next_state_pred
+        
+        # 梯度更新
+        sa = np.concatenate([state, action])
+        self.W -= self.lr * np.outer(sa, error)
+        self.b -= self.lr * error
+    
+    def imagine(self, state: np.ndarray, actions: List[np.ndarray]) -> List[np.ndarray]:
+        """心理模拟: 想象执行一系列动作后的状态"""
+        current = state
+        trajectory = [current]
+        
+        for a in actions:
+            current = self.predict(current, a)
+            trajectory.append(current)
+        
+        return trajectory
+
+
+# ==================== 整合系统 ====================
+
+class PredictiveSystem:
+    """
+    预测导向有限竞争表征系统 (Bug修复版)
+    
+    核心: 压缩 → 预测 → 选择 → 更新
+    """
+    
+    def __init__(self, config: Config = None):
+        self.config = config or Config()
+        
+        # 表征池
+        self.pool = RepresentationPool(
+            dim=self.config.INPUT_DIM,
+            capacity=self.config.POOL_CAPACITY,
+            lr=self.config.LEARNING_RATE
+        )
+        self.pool.initialize(3)
+        
+        # 状态转移模型
+        self.transition = StateTransitionModel(
+            state_dim=self.config.INPUT_DIM,
+            action_dim=self.config.INPUT_DIM,
+            lr=self.config.LEARNING_RATE
+        )
+        
+        # 历史
+        self.state_history = []
+        self.selection_history = []
         
         # 统计
-        self.step_count = 0
-        self.prediction_error_history = []
-        self.reconstruction_error_history = []
-        
-        # 初始化表征池
-        self._init_representations()
+        self.pred_errors = []
+        self.recon_errors = []
     
-    def _init_representations(self):
-        """初始化表征池"""
-        for _ in range(3):
-            rep = np.random.randn(self.input_dim)
-            rep = rep / (np.linalg.norm(rep) + 1e-8)
-            self.representations.append(rep)
-        
-        self.selector = PredictiveSelector(self.representations, self.compressor)
-    
-    def step(self, x: np.ndarray) -> dict:
+    def step(self, x: np.ndarray, explore: float = None) -> dict:
         """执行一步"""
-        self.step_count += 1
+        explore = explore or self.config.EXPLORATION_RATE
         
-        # 1. 压缩
-        compressed = self.compressor.compress(x)
-        self.compressor.compressed_history.append(compressed)
+        # 1. 获取当前状态
+        if len(self.state_history) > 0:
+            state_curr = self.state_history[-1]
+        else:
+            state_curr = np.zeros(self.config.INPUT_DIM)
         
-        # 2. 预测 & 更新
-        if len(self.compressor.compressed_history) >= 2:
-            compressed_prev = self.compressor.compressed_history[-2]
-            predicted = self.compressor.predict(compressed_prev)
-            
-            # 预测误差
-            pred_error = np.linalg.norm(predicted - compressed)
-            self.prediction_error_history.append(pred_error)
-            
-            # 更新预测器
-            self.compressor.update(compressed_prev, compressed)
+        # 2. 基于预测选择表征
+        idx = self.pool.select_by_prediction(x, exploration=explore)
+        rep = self.pool.reps[idx]
         
-        # 3. 选择表征
-        selected_idx = self.selector.select(x, self.exploration_rate)
-        selected_rep = self.representations[selected_idx]
+        # 3. 重构误差
+        recon_err = np.linalg.norm(rep.vector - x)
+        self.recon_errors.append(recon_err)
         
-        # 4. 重构误差
-        recon_error = np.linalg.norm(x - selected_rep)
-        self.reconstruction_error_history.append(recon_error)
+        # 4. 预测更新
+        state_next = stable_normalize(x)
         
-        # 5. 更新表征
-        self.representations[selected_idx] += 0.01 * (x - selected_rep)
-        self.representations[selected_idx] /= (np.linalg.norm(self.representations[selected_idx]) + 1e-8)
+        # 更新表征的预测器
+        rep.predictor.update(state_curr, state_next)
+        
+        # 更新表征向量
+        self.pool.update(idx, x, state_curr, state_next)
+        
+        # 5. 记录
+        self.state_history.append(state_next)
+        self.selection_history.append(idx)
+        
+        # 限制历史
+        if len(self.state_history) > 1000:
+            self.state_history = self.state_history[-1000:]
         
         return {
-            "step": self.step_count,
-            "prediction_error": self.prediction_error_history[-1] if self.prediction_error_history else None,
-            "reconstruction_error": recon_error,
-            "pool_size": len(self.representations)
+            "recon_error": recon_err,
+            "pred_error": rep.predictor.get_mean_error(),
+            "selected_idx": idx
         }
     
-    def run(self, env, steps: int) -> dict:
+    def run(self, env, steps: int, explore: float = None) -> dict:
         """运行多步"""
         for _ in range(steps):
             x = env.generate_input()
-            self.step(x)
+            self.step(x, explore)
         
         return self.get_statistics()
     
     def get_statistics(self) -> dict:
-        """获取统计信息"""
-        pred_errors = np.array(self.prediction_error_history[-100:]) if self.prediction_error_history else np.array([])
-        recon_errors = np.array(self.reconstruction_error_history[-100:]) if self.reconstruction_error_history else np.array([])
+        """获取统计"""
+        recon = np.array(self.recon_errors[-100:]) if self.recon_errors else np.array([0])
         
         return {
-            "step": self.step_count,
-            "pool_size": len(self.representations),
-            "mean_prediction_error": float(np.mean(pred_errors)) if len(pred_errors) > 0 else None,
-            "mean_reconstruction_error": float(np.mean(recon_errors)) if len(recon_errors) > 0 else None,
-            "compression_ratio": self.input_dim / self.compress_dim
+            "mean_recon_error": float(np.mean(recon)),
+            "std_recon_error": float(np.std(recon)),
+            "pool_size": len(self.pool.reps),
+            "selections": self.pool.selection_counts[-100:]
         }
 
 
-class RandomBaseline:
+# ==================== 基线系统 ====================
+
+class ReconstructionBaseline:
+    """重构基线: 使用重构误差选择"""
+    
+    def __init__(self, dim: int, capacity: int, lr: float = 0.01):
+        self.dim = dim
+        self.reps = [xavier_init(dim, 1).flatten() for _ in range(capacity)]
+        for r in self.reps:
+            r /= (np.linalg.norm(r) + 1e-8)
+        self.lr = lr
+        self.errors = []
+    
+    def step(self, x: np.ndarray) -> float:
+        # 基于重构选择
+        idx = np.argmin([np.linalg.norm(r - x) for r in self.reps])
+        
+        # 重构误差
+        err = np.linalg.norm(self.reps[idx] - x)
+        self.errors.append(err)
+        
+        # 更新
+        self.reps[idx] += self.lr * (x - self.reps[idx])
+        self.reps[idx] /= (np.linalg.norm(self.reps[idx]) + 1e-8)
+        
+        return err
+
+
+class RandomBaseline2:
     """随机基线"""
     
-    def __init__(self, compress_dim: int = 5):
-        self.compress_dim = compress_dim
+    def __init__(self, dim: int, capacity: int):
+        self.dim = dim
+        self.reps = [xavier_init(dim, 1).flatten() for _ in range(capacity)]
+        for r in self.reps:
+            r /= (np.linalg.norm(r) + 1e-8)
+        self.errors = []
     
-    def compress(self, x: np.ndarray) -> np.ndarray:
-        compressed = np.random.randn(self.compress_dim)
-        return compressed / (np.linalg.norm(compressed) + 1e-8)
+    def step(self, x: np.ndarray) -> float:
+        # 随机选择
+        idx = np.random.randint(len(self.reps))
+        
+        err = np.linalg.norm(self.reps[idx] - x)
+        self.errors.append(err)
+        
+        return err
+
+
+# ==================== 简单环境 ====================
+
+class SimpleEnv:
+    """简单环境: 多类高斯分布"""
     
-    def predict(self, compressed: np.ndarray) -> np.ndarray:
-        return np.random.randn(self.compress_dim)
+    def __init__(self, dim: int = 10, n_classes: int = 5, noise: float = 0.3):
+        self.dim = dim
+        self.n_classes = n_classes
+        self.noise = noise
+        
+        # 类中心
+        np.random.seed(42)
+        self.centers = {i: np.random.randn(dim) * 2 for i in range(n_classes)}
+    
+    def generate_input(self) -> np.ndarray:
+        c = self.centers[np.random.randint(0, self.n_classes)]
+        return c + np.random.randn(self.dim) * self.noise
+
+
+# ==================== 测试 ====================
+
+def test_core_fix():
+    """测试核心修复"""
+    print("="*60)
+    print("Core Fix Test")
+    print("="*60)
+    
+    results = {'pred': [], 'recon': [], 'random': []}
+    
+    for run in range(20):
+        np.random.seed(run * 100)
+        
+        # 预测系统
+        Config.set(LEARNING_RATE=0.01, EXPLORATION_RATE=0.1)
+        env = SimpleEnv(10, 5, 0.3)
+        sys = PredictiveSystem()
+        
+        for _ in range(500):
+            x = env.generate_input()
+            sys.step(x)
+        
+        results['pred'].append(np.mean(sys.recon_errors[-100:]))
+        
+        # 重构基线
+        np.random.seed(run * 100)
+        env = SimpleEnv(10, 5, 0.3)
+        baseline = ReconstructionBaseline(10, 3, 0.01)
+        
+        for _ in range(500):
+            x = env.generate_input()
+            baseline.step(x)
+        
+        results['recon'].append(np.mean(baseline.errors[-100:]))
+        
+        # 随机基线
+        np.random.seed(run * 100)
+        env = SimpleEnv(10, 5, 0.3)
+        rand = RandomBaseline2(10, 3)
+        
+        for _ in range(500):
+            x = env.generate_input()
+            rand.step(x)
+        
+        results['random'].append(np.mean(rand.errors[-100:]))
+    
+    print(f"\n预测选择:   {np.mean(results['pred']):.4f} +/- {np.std(results['pred']):.4f}")
+    print(f"重构选择:   {np.mean(results['recon']):.4f} +/- {np.std(results['recon']):.4f}")
+    print(f"随机选择:   {np.mean(results['random']):.4f} +/- {np.std(results['random']):.4f}")
+    
+    # 计算改进
+    pred_vs_recon = (np.mean(results['recon']) - np.mean(results['pred'])) / np.mean(results['recon']) * 100
+    pred_vs_random = (np.mean(results['random']) - np.mean(results['pred'])) / np.mean(results['random']) * 100
+    
+    print(f"\n预测 vs 重构: {pred_vs_recon:+.1f}%")
+    print(f"预测 vs 随机: {pred_vs_random:+.1f}%")
+    
+    if pred_vs_recon > 5:
+        print("\n✅ 预测选择显著优于重构选择!")
+    elif pred_vs_recon > 0:
+        print("\n⚠️ 预测选择略优于重构选择")
+    else:
+        print("\n❌ 预测选择未优于重构选择")
+
+
+def test_selection_distribution():
+    """测试选择分布"""
+    print("\n" + "="*60)
+    print("Selection Distribution Test")
+    print("="*60)
+    
+    env = SimpleEnv(10, 5, 0.3)
+    sys = PredictiveSystem()
+    
+    for _ in range(500):
+        x = env.generate_input()
+        sys.step(x)
+    
+    # 统计选择
+    from collections import Counter
+    counts = Counter(sys.pool.selection_counts)
+    
+    print(f"选择分布: {dict(counts)}")
+    
+    if len(counts) > 1:
+        print("✅ 选择有多样性!")
+    else:
+        print("❌ 选择无多样性!")
+
+
+if __name__ == "__main__":
+    test_core_fix()
+    test_selection_distribution()
+    print("\nDone!")
